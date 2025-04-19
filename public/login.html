@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - Oxelun</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Login</h1>
+    <form action="/login" method="POST">
+      <label for="username">Username:</label>
+      <input type="text" name="username" required />
+      
+      <label for="password">Password:</label>
+      <input type="password" name="password" required />
+      
+      <button type="submit">Log In</button>
+    </form>
+    <p>Don't have an account? <a href="/signup">Sign up here</a>.</p>
+    <a href="/">Back to Home</a>
+  </div>
+</body>
+</html>
