@@ -1,95 +1,113 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
-const { config } = require('dotenv');
+const session = require('express-session');
 const fs = require('fs');
-
-config(); // Load .env
+const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// --- Directories ---
+const uploadsDir = path.join(__dirname, 'uploads');
+const usersFile = path.join(__dirname, 'data', 'users.json');
+
+// --- Ensure directories exist ---
+fs.mkdirSync(uploadsDir, { recursive: true });
+fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+
+// --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'oxeluns_secret_key',
+  resave: false,
+  saveUninitialized: true,
+}));
 
-const upload = multer({ dest: 'uploads/' });
-
-// Cloudinary config
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET,
+// --- Multer config ---
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => cb(null, file.originalname)
 });
+const upload = multer({ storage });
 
-// Load uploaded files metadata from file
-const DATA_FILE = 'uploads.json';
-let uploadedFiles = [];
+// --- Utility functions ---
+const loadUsers = () => {
+  if (!fs.existsSync(usersFile)) return {};
+  return JSON.parse(fs.readFileSync(usersFile));
+};
+const saveUsers = (users) => fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
-if (fs.existsSync(DATA_FILE)) {
-  try {
-    uploadedFiles = JSON.parse(fs.readFileSync(DATA_FILE));
-  } catch (err) {
-    console.error('Failed to load saved uploads:', err.message);
-  }
-}
+// --- Auth middleware ---
+const requireAuth = (req, res, next) => {
+  if (!req.session.user) return res.redirect('/login');
+  next();
+};
 
-function saveUploads() {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(uploadedFiles, null, 2));
-}
+// --- Routes ---
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public/about.html')));
+app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public/contact.html')));
 
-app.post('/upload', upload.single('file'), async (req, res) => {
-  try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: 'auto',
-      public_id: req.file.originalname.split('.')[0],
-    });
-
-    fs.unlinkSync(req.file.path);
-
-    const fileData = {
-      originalName: req.file.originalname,
-      cloudinaryUrl: result.secure_url,
-      public_id: result.public_id,
-    };
-
-    uploadedFiles.push(fileData);
-    saveUploads();
-
-    res.send(`
-      <h2>File uploaded!</h2>
-      <p>Direct link: <a href="${result.secure_url}" target="_blank">${result.secure_url}</a></p>
-      <p><a href="${result.secure_url}" download="${req.file.originalname}">⬇️ Download ${req.file.originalname}</a></p>
-      ${result.resource_type === 'image' ? `<img src="${result.secure_url}" style="max-width:300px;">` : ''}
-      <br><a href="/">Back</a>
-    `);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send(`
-      <h2>Upload failed.</h2>
-      <pre>${err.message}</pre>
-      <br><a href="/">Back</a>
-    `);
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  const users = loadUsers();
+  const user = users[username];
+  if (user && bcrypt.compareSync(password, user.password)) {
+    req.session.user = username;
+    res.redirect('/downloads');
+  } else {
+    res.send('<h2>Login failed</h2><a href="/login">Try again</a>');
   }
 });
 
-// Serve uploaded files list page
-app.get('/downloads', (req, res) => {
-  const list = uploadedFiles.map(f => `
-    <li>
-      ${f.originalName} - 
-      <a href="${f.cloudinaryUrl}" download="${f.originalName}">⬇️ Download</a>
-    </li>
-  `).join('');
+app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public/signup.html')));
+app.post('/signup', (req, res) => {
+  const { username, password } = req.body;
+  const users = loadUsers();
+  if (users[username]) return res.send('<h2>User exists</h2><a href="/signup">Try again</a>');
+  users[username] = { password: bcrypt.hashSync(password, 10) };
+  saveUsers(users);
+  res.redirect('/login');
+});
 
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/'));
+});
+
+app.get('/uploads/:filename', requireAuth, (req, res) => {
+  const file = path.join(uploadsDir, req.params.filename);
+  if (fs.existsSync(file)) res.download(file);
+  else res.status(404).send('File not found');
+});
+
+app.get('/downloads', requireAuth, (req, res) => {
+  const files = fs.readdirSync(uploadsDir);
+  const list = files.map(f => `<li><a href="/uploads/${encodeURIComponent(f)}">${f}</a></li>`).join('');
   res.send(`
-    <h1>Uploaded Files</h1>
+    <h2>Available Files</h2>
     <ul>${list}</ul>
-    <br><a href="/">Back to Home</a>
+    <a href="/">Back</a>
   `);
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
+app.get('/upload', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/upload.html'));
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.post('/upload', requireAuth, upload.single('file'), (req, res) => {
+  if (!req.file) return res.send('<h2>No file uploaded</h2>');
+  res.send(`
+    <h2>Upload complete</h2>
+    <p>File: <a href="/uploads/${encodeURIComponent(req.file.originalname)}">${req.file.originalname}</a></p>
+    <a href="/">Back</a>
+  `);
+});
+
+// Fallback route
+app.get('*', (req, res) => res.redirect('/'));
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
