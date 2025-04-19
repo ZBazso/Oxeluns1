@@ -39,7 +39,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Fallback
+// Fallback: catch-all for the frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
