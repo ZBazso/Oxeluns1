@@ -23,6 +23,12 @@
     <p id="output"></p>
     <p><a href="#" onclick="startGame()">🎮 Try the mini game</a></p>
   </main>
+  
+	  <h2>Upload a file</h2>
+	<form action="/upload" method="POST" enctype="multipart/form-data">
+	  <input type="file" name="file" required />
+	  <button type="submit">Upload</button>
+	</form>
 
   <footer>
     <p>&copy; 2025 Oxeluns1 Project</p>
