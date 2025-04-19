@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Contact - Oxeluns1</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <button onclick="toggleTheme()">🌓</button>
+  </nav>
+
+  <main>
+    <h1>Contact Us</h1>
+    <form id="contactForm">
+      <input type="text" name="name" placeholder="Your Name" required><br>
+      <input type="email" name="email" placeholder="Your Email" required><br>
+      <textarea name="message" placeholder="Your Message" required></textarea><br>
+      <button type="submit">Send</button>
+    </form>
+    <p id="formStatus"></p>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Oxeluns1 Project</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
