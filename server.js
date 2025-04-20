@@ -5,21 +5,20 @@ const session = require('express-session');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const FileStore = require('session-file-store')(session);
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// --- Directories ---
+// --- Define paths ---
 const uploadsDir = path.join(__dirname, 'uploads');
-const usersFile = path.join(__dirname, 'data', 'users.json');
-const sessionsDir = path.join(__dirname, 'data/sessions');
+const dataDir = path.join(__dirname, 'data');
+const sessionsDir = path.join(dataDir, 'sessions');
+const usersFile = path.join(dataDir, 'users.json');
 
-// --- Ensure directories exist ---
-// --- Ensure directories exist BEFORE middleware ---
+// ✅ LÉTREHOZÁSOK ELŐRE, MIELŐTT bármi session történik!
 fs.mkdirSync(uploadsDir, { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-fs.mkdirSync(sessionsDir, { recursive: true }); // MINDEN EZ ELÉ KERÜLJÖN
+fs.mkdirSync(dataDir, { recursive: true });
+fs.mkdirSync(sessionsDir, { recursive: true });
+
+// ✅ MOST jöhet a session store, mivel már létezik a mappa!
+const FileStore = require('session-file-store')(session);
 
 // --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
