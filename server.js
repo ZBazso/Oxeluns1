@@ -17,6 +17,7 @@ const usersFile = path.join(__dirname, 'data', 'users.json');
 // --- Ensure directories exist ---
 fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+fs.mkdirSync(path.join(__dirname, 'data/sessions'), { recursive: true });
 
 // --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
