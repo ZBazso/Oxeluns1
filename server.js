@@ -5,6 +5,7 @@ const session = require('express-session');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const FileStore = require('session-file-store')(session);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,9 +22,10 @@ fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
+  store: new FileStore({ path: path.join(__dirname, 'data/sessions') }),
   secret: 'oxeluns_secret_key',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
 }));
 
 // --- Multer config ---
@@ -80,7 +82,7 @@ app.get('/logout', (req, res) => {
 
 app.get('/uploads/:filename', requireAuth, (req, res) => {
   const file = path.join(uploadsDir, req.params.filename);
-  if (fs.existsSync(file)) res.download(file);
+  if (fs.existsSync(file)) res.download(file, req.params.filename);
   else res.status(404).send('File not found');
 });
 
@@ -88,9 +90,19 @@ app.get('/downloads', requireAuth, (req, res) => {
   const files = fs.readdirSync(uploadsDir);
   const list = files.map(f => `<li><a href="/uploads/${encodeURIComponent(f)}">${f}</a></li>`).join('');
   res.send(`
-    <h2>Available Files</h2>
-    <ul>${list}</ul>
-    <a href="/">Back</a>
+    <html>
+    <head>
+      <link rel="stylesheet" href="/style.css">
+      <title>Downloads</title>
+    </head>
+    <body>
+      <div class="container">
+        <h2>Available Files</h2>
+        <ul>${list}</ul>
+        <a href="/">Back</a>
+      </div>
+    </body>
+    </html>
   `);
 });
 
@@ -101,9 +113,19 @@ app.get('/upload', requireAuth, (req, res) => {
 app.post('/upload', requireAuth, upload.single('file'), (req, res) => {
   if (!req.file) return res.send('<h2>No file uploaded</h2>');
   res.send(`
-    <h2>Upload complete</h2>
-    <p>File: <a href="/uploads/${encodeURIComponent(req.file.originalname)}">${req.file.originalname}</a></p>
-    <a href="/">Back</a>
+    <html>
+    <head>
+      <link rel="stylesheet" href="/style.css">
+      <title>Upload Complete</title>
+    </head>
+    <body>
+      <div class="container">
+        <h2>Upload complete</h2>
+        <p>File: <a href="/uploads/${encodeURIComponent(req.file.originalname)}">${req.file.originalname}</a></p>
+        <a href="/">Back</a>
+      </div>
+    </body>
+    </html>
   `);
 });
 
