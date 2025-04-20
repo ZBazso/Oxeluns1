@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Welcome - Oxeluns1</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="/icon.png">
 </head>
 <body>
   <nav>
@@ -18,23 +19,22 @@
     <h1>Welcome to Oxeluns1</h1>
     <p>This is a full-featured webserver project.</p>
   </header>
+	  
+	<main>
+	  <button onclick="showMessage()">Click me!</button>
+	  <p id="output"></p>
+	  <p><a href="#" onclick="startGame()">🎮 Try the mini game</a></p>
 
-  <main>
-    <button onclick="showMessage()">Click me!</button>
-    <p id="output"></p>
-    <p><a href="#" onclick="startGame()">🎮 Try the mini game</a></p>
-  </main>
-  
-      <!-- File upload section -->
-    <section>
-      <h2>Upload a file</h2>
-      <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" required />
-        <button type="submit">Upload</button>
-      </form>
-      <div id="uploadResult"></div>
-    </section>
-  </main>
+	  <!-- File upload section -->
+	  <section>
+		<h2>Upload a file</h2>
+		<form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+		  <input type="file" name="file" required />
+		  <button type="submit">Upload</button>
+		</form>
+		<div id="uploadResult"></div>
+	  </section>
+	</main>
 
   <footer>
     <p>&copy; 2025 Oxeluns1 Project</p>

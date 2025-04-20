@@ -13,17 +13,18 @@ const PORT = process.env.PORT || 3000;
 // --- Directories ---
 const uploadsDir = path.join(__dirname, 'uploads');
 const usersFile = path.join(__dirname, 'data', 'users.json');
+const sessionsDir = path.join(__dirname, 'data/sessions');
 
 // --- Ensure directories exist ---
 fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'data/sessions'), { recursive: true });
+fs.mkdirSync(sessionsDir, { recursive: true }); // Ensure session directory exists
 
 // --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  store: new FileStore({ path: path.join(__dirname, 'data/sessions') }),
+  store: new FileStore({ path: sessionsDir }),
   secret: 'oxeluns_secret_key',
   resave: false,
   saveUninitialized: false,
