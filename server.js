@@ -6,6 +6,9 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
+// --- Create an Express app ---
+const app = express();  // IDE kell a deklaráció!
+
 // --- Define paths ---
 const uploadsDir = path.join(__dirname, 'uploads');
 const dataDir = path.join(__dirname, 'data');
