@@ -16,9 +16,10 @@ const usersFile = path.join(__dirname, 'data', 'users.json');
 const sessionsDir = path.join(__dirname, 'data/sessions');
 
 // --- Ensure directories exist ---
+// --- Ensure directories exist BEFORE middleware ---
 fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-fs.mkdirSync(sessionsDir, { recursive: true }); // Ensure session directory exists
+fs.mkdirSync(sessionsDir, { recursive: true }); // MINDEN EZ ELÉ KERÜLJÖN
 
 // --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
