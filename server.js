@@ -18,9 +18,11 @@ const usersFile = path.join(dataDir, 'users.json');
 // ✅ LÉTREHOZÁSOK ELŐRE, MIELŐTT bármi session történik!
 fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(dataDir, { recursive: true });
-fs.mkdirSync(sessionsDir, { recursive: true });
 
-// ✅ MOST jöhet a session store, mivel már létezik a mappa!
+// ✅ Ensure session folder exists before setting up session store
+fs.mkdirSync(sessionsDir, { recursive: true });  // Ensure the sessions directory exists
+
+// ✅ NOW, create the session store as usual
 const FileStore = require('session-file-store')(session);
 
 // --- Middleware ---
