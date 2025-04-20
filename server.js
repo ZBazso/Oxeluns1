@@ -5,9 +5,11 @@ const session = require('express-session');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
 // --- Create an Express app ---
-const app = express();  // IDE kell a deklaráció!
+const app = express();
 
 // --- Define paths ---
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -20,26 +22,22 @@ fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(dataDir, { recursive: true });
 
 // ✅ Ensure session folder exists before setting up session store
-fs.mkdirSync(sessionsDir, { recursive: true });  // Ensure the sessions directory exists
+fs.mkdirSync(sessionsDir, { recursive: true });
 
-// ✅ NOW, create the session store as usual
-const FileStore = require('session-file-store')(session);
+// Supabase setup
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  store: new FileStore({ path: sessionsDir }),
   secret: 'oxeluns_secret_key',
   resave: false,
   saveUninitialized: false,
 }));
 
 // --- Multer config ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, file.originalname)
-});
+const storage = multer.memoryStorage();  // Store files in memory before uploading
 const upload = multer({ storage });
 
 // --- Utility functions ---
@@ -47,6 +45,7 @@ const loadUsers = () => {
   if (!fs.existsSync(usersFile)) return {};
   return JSON.parse(fs.readFileSync(usersFile));
 };
+
 const saveUsers = (users) => fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
 // --- Auth middleware ---
@@ -88,27 +87,17 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/uploads/:filename', requireAuth, (req, res) => {
-  const file = path.join(uploadsDir, req.params.filename);
-  if (fs.existsSync(file)) res.download(file, req.params.filename);
-  else res.status(404).send('File not found');
+  res.send('<h2>File upload via Supabase only</h2>');
 });
 
-app.get('/downloads', requireAuth, (req, res) => {
-  const files = fs.readdirSync(uploadsDir);
-  const list = files.map(f => `<li><a href="/uploads/${encodeURIComponent(f)}">${f}</a></li>`).join('');
+app.get('/downloads', requireAuth, async (req, res) => {
+  const { data, error } = await supabase.storage.from(process.env.SUPABASE_BUCKET).list('');
+  if (error) return res.status(500).send(error.message);
+  const list = data.map(file => `<li><a href="https://your-supabase-url.supabase.co/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${file.name}">${file.name}</a></li>`).join('');
   res.send(`
     <html>
-    <head>
-      <link rel="stylesheet" href="/style.css">
-      <title>Downloads</title>
-    </head>
-    <body>
-      <div class="container">
-        <h2>Available Files</h2>
-        <ul>${list}</ul>
-        <a href="/">Back</a>
-      </div>
-    </body>
+      <head><link rel="stylesheet" href="/style.css"><title>Downloads</title></head>
+      <body><h2>Available Files</h2><ul>${list}</ul><a href="/">Back</a></body>
     </html>
   `);
 });
@@ -117,28 +106,36 @@ app.get('/upload', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public/upload.html'));
 });
 
-app.post('/upload', requireAuth, upload.single('file'), (req, res) => {
+app.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.send('<h2>No file uploaded</h2>');
+
+  // Upload file to Supabase storage
+  const { data, error } = await supabase.storage
+  .from('uploads1')  // Use the correct bucket name here
+  .upload(`public/${req.file.originalname}`, req.file.buffer, {
+    cacheControl: '3600',
+    upsert: false,
+  });
+
+
+  if (error) return res.status(500).send(error.message);
+
+  // Return the response
   res.send(`
     <html>
-    <head>
-      <link rel="stylesheet" href="/style.css">
-      <title>Upload Complete</title>
-    </head>
-    <body>
-      <div class="container">
-        <h2>Upload complete</h2>
-        <p>File: <a href="/uploads/${encodeURIComponent(req.file.originalname)}">${req.file.originalname}</a></p>
+      <head><link rel="stylesheet" href="/style.css"><title>Upload Complete</title></head>
+      <body>
+        <h2>Upload Complete</h2>
+        <p>File: <a href="https://your-supabase-url.supabase.co/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${data.path}">${data.name}</a></p>
         <a href="/">Back</a>
-      </div>
-    </body>
+      </body>
     </html>
   `);
 });
 
 // Fallback route
 app.get('*', (req, res) => res.redirect('/'));
-// --- Define the PORT for the server --- 
-const PORT = process.env.PORT || 3000;  // Use Render's environment variable or default to 3000
 
+// Define the PORT for the server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
