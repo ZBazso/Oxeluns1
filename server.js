@@ -109,16 +109,16 @@ app.get('/upload', requireAuth, (req, res) => {
 app.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.send('<h2>No file uploaded</h2>');
 
-  // Upload file to Supabase storage
-  const { data, error } = await supabase.storage
-  .from('uploads1')  // Use the correct bucket name here
-  .upload(`public/${req.file.originalname}`, req.file.buffer, {
-    cacheControl: '3600',
-    upsert: false,
-  });
+const { data, error } = await supabase.storage
+  .from('uploads1')
+  .upload('test-file.txt', 'Hello, world!');
 
+if (error) {
+  console.error('Error uploading:', error.message);
+  return res.send('<h2>Error uploading file</h2>');
+}
 
-  if (error) return res.status(500).send(error.message);
+res.send('<h2>File uploaded successfully!</h2>');
 
   // Return the response
   res.send(`
